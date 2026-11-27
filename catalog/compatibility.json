@@ -1,0 +1,21 @@
+{
+  "classes": {
+    "native": "Runs on Databricks Free Edition serverless with little or no change.",
+    "adapted": "Needs changes such as volume paths instead of local or DBFS paths, a file or rate source instead of Kafka, or removing RDD, sparkContext, cache or spark.master settings.",
+    "alt_env": "Needs an environment outside the Free Edition browser workspace, such as a Kafka broker, Databricks CLI, VS Code, CI/CD or an external Git provider."
+  },
+  "classification_status": "preliminary, unverified against Free Edition limits",
+  "free_edition_limitations": {
+    "source": "https://docs.databricks.com/aws/en/getting-started/free-edition-limitations",
+    "retrieved": "2026-11-27",
+    "summary": [
+      "Serverless compute only; custom compute configurations are not supported.",
+      "Outbound internet access is limited to a set of trusted domains.",
+      "One SQL warehouse (2X-Small), max 5 concurrent job tasks, one active pipeline per pipeline type.",
+      "R and Scala are not supported; custom workspace storage locations are not supported.",
+      "One workspace and one metastore per account; no account console or account-level APIs; no SSO or SCIM.",
+      "Usage quotas apply; exceeding them shuts compute down for the rest of the day.",
+      "Non-commercial use only; no SLA or support."
+    ]
+  }
+}

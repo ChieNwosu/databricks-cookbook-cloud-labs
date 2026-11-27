@@ -1,0 +1,17 @@
+{
+  "labs": [
+    {
+      "id": "1.0",
+      "title": "Chapter 1 PySpark smoke test",
+      "path": "labs/chapter-01/00-smoke-test.py",
+      "guide": "docs/first-notebook.md",
+      "compatibility": "native",
+      "status": "drafted",
+      "evidence": [],
+      "reviewed_by": null,
+      "databricks_runtime": null,
+      "last_verified": null,
+      "notes": "Environment check, not a cookbook recipe. Never executed by the authors. Catalog, schema and volume defaults are to be confirmed on Free Edition."
+    }
+  ]
+}

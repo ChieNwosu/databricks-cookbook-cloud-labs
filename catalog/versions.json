@@ -1,0 +1,25 @@
+{
+  "upstream": {
+    "repo": "PacktPublishing/Data-Engineering-with-Databricks-Cookbook",
+    "analysed_tree_sha": "fa1657c3808c0d520ea19a49f967df510b4f627d",
+    "analysed_ref": "main",
+    "components": {
+      "spark": {"version": "3.4.1", "source": "upstream docker compose"},
+      "kafka": {"version": "3.5.1", "source": "upstream docker compose (bitnami image)"},
+      "zookeeper": {"version": "3.8.2", "source": "upstream docker compose"},
+      "jupyterlab": {"version": "4.0.2", "source": "upstream docker compose"},
+      "delta": {"version": null, "source": "not yet determined from upstream; record when found"}
+    }
+  },
+  "free_edition": {
+    "databricks_runtime": null,
+    "spark_version": null,
+    "delta_version": null,
+    "observed_on": null,
+    "observed_by": null,
+    "evidence": [],
+    "note": "Unknown until observed in a real Free Edition workspace. Do not guess."
+  },
+  "review_cadence": "Re-check at the start of each phase and at least every 90 days.",
+  "drift_log": []
+}
