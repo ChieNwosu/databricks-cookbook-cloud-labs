@@ -25,9 +25,20 @@ EXPECTED_CHAPTERS = 11
 NOTE_KEYS = [
     "recipe_id", "chapter", "title", "compatibility", "status", "source_ref", "provenance",
     "databricks_runtime", "spark_version", "delta_version", "last_verified", "reviewer",
-    "evidence_links", "tags", "llm_summary",
+    "evidence_links", "tags", "llm_summary", "concept_id", "learning_objective", "implementation_engine",
+    "engine_version", "verification_status", "known_limitations", "related_concepts", "revalidation_triggers",
+    "authorship", "human_reflection_present",
 ]
-EVIDENCE_KEYS = ["recipe_id", "run_url", "screenshot_path", "date", "databricks_runtime", "reviewer", "result"]
+ENGINES = ["pyspark", "databricks_sql", "mysql"]
+AUTHORSHIP = ["human", "agent_generated", "mixed"]
+NOTE_LIST_KEYS = ("evidence_links", "tags", "known_limitations", "related_concepts", "revalidation_triggers")
+REFLECTIONS_HEADING = "## My reflections (human-authored)"
+EVIDENCE_KEYS = ["recipe_id", "engine", "engine_version", "evidence_type", "run_url", "screenshot_path", "date",
+                 "databricks_runtime", "sanitized", "human_reviewer", "result"]
+EVIDENCE_TYPES = ["static_validation", "unit_test", "integration_test", "cloud_execution", "human_verification"]
+APPLICABILITY = ["planned", "applicable", "not_applicable", "unresolved"]
+SQL_TRACKS = ("databricks_sql", "mysql")
+CONCEPT_ID_RX = re.compile(r"[a-z0-9][a-z0-9._-]*")
 SKIP_DIRS = {".git", "__pycache__", ".agents", "node_modules"}
 TEXT_SUFFIXES = {".md", ".json", ".py", ".yml", ".yaml", ".txt", ".sql", ".ipynb", ".toml", ".cfg", ".ini", ".sh",
                  ".env", ".conf", ".properties", ""}
@@ -346,6 +357,7 @@ def check_front_matter_files(root, errors):
     notes = root / "notes"
     if notes.is_dir():
         targets += [(p, NOTE_KEYS, False) for p in sorted(notes.rglob("*.md"))]
+    concept_ids = {}
     for path, keys, required in targets:
         rel = path.relative_to(root)
         if not path.is_file():
@@ -367,9 +379,115 @@ def check_front_matter_files(root, errors):
             if fm["compatibility"] not in CLASSES:
                 errors.append(f"{rel}: invalid compatibility {fm['compatibility']!r}")
             if fm["status"] == "verified":
-                for k in ("evidence_links", "reviewer", "databricks_runtime", "last_verified"):
+                for k in ("evidence_links", "reviewer", "databricks_runtime", "last_verified", "engine_version"):
                     if not _nonempty(fm[k]):
                         errors.append(f"{rel}: verified requires non-empty '{k}'")
+            _check_note_governance(rel, fm, path, errors, concept_ids)
+        elif keys is EVIDENCE_KEYS:
+            if fm["evidence_type"] not in EVIDENCE_TYPES:
+                errors.append(f"{rel}: invalid evidence_type {fm['evidence_type']!r}")
+            if not isinstance(fm["sanitized"], bool):
+                errors.append(f"{rel}: sanitized must be true or false")
+
+
+def _check_note_governance(rel, fm, path, errors, concept_ids):
+    """Knowledge-governance keys shared by the note template and every note."""
+    cid = fm["concept_id"]
+    if not isinstance(cid, str) or not CONCEPT_ID_RX.fullmatch(cid):
+        errors.append(f"{rel}: concept_id must be a stable lowercase id, found {cid!r}")
+    elif str(rel).startswith("notes"):
+        if cid in concept_ids:
+            errors.append(f"{rel}: duplicate concept_id {cid!r} (also in {concept_ids[cid]})")
+        concept_ids[cid] = str(rel)
+    if fm["implementation_engine"] not in ENGINES:
+        errors.append(f"{rel}: invalid implementation_engine {fm['implementation_engine']!r}")
+    if fm["authorship"] not in AUTHORSHIP:
+        errors.append(f"{rel}: invalid authorship {fm['authorship']!r}")
+    if not isinstance(fm["human_reflection_present"], bool):
+        errors.append(f"{rel}: human_reflection_present must be true or false")
+    if fm["verification_status"] != fm["status"]:
+        errors.append(f"{rel}: verification_status {fm['verification_status']!r} must mirror status {fm['status']!r}")
+    for k in NOTE_LIST_KEYS:
+        if not isinstance(fm[k], list):
+            errors.append(f"{rel}: {k} must be a list")
+    if fm["status"] == "verified" and not _nonempty(fm["learning_objective"]):
+        errors.append(f"{rel}: verified requires non-empty 'learning_objective'")
+    if fm["status"] == "verified" and fm["authorship"] == "agent_generated":
+        errors.append(f"{rel}: verified note cannot be purely agent_generated, a human must review it")
+    try:
+        body = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return
+    if REFLECTIONS_HEADING not in body.split("\n"):
+        errors.append(f"{rel}: missing section '{REFLECTIONS_HEADING}'")
+
+
+def check_sql_companion(root, recipes, errors):
+    """catalog/sql_companion.json: linked by recipe id, applicability separate from execution status."""
+    data = _load_json(root, "sql_companion.json", errors)
+    if data is None:
+        return
+    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        errors.append("sql_companion.json: 'entries' must be a list")
+        return
+    ids = {r.get("id") for r in recipes}
+    seen = set()
+    for e in entries:
+        rid = e.get("recipe_id") if isinstance(e, dict) else None
+        tag = f"sql companion {rid}"
+        if rid not in ids:
+            errors.append(f"{tag}: recipe_id not found in recipes.json")
+        if rid in seen:
+            errors.append(f"{tag}: duplicate recipe_id")
+        seen.add(rid)
+        for track in SQL_TRACKS:
+            t = e.get(track) if isinstance(e, dict) else None
+            if not isinstance(t, dict):
+                errors.append(f"{tag}: missing track '{track}'")
+                continue
+            _check_sql_track(root, tag, track, t, errors)
+    missing = sorted(ids - seen)
+    if missing:
+        errors.append(f"sql_companion.json: no entry for recipes {missing}")
+
+
+def _check_sql_track(root, tag, track, t, errors):
+    tt = f"{tag} {track}"
+    app, ex = t.get("applicability"), t.get("execution_status")
+    if app not in APPLICABILITY:
+        errors.append(f"{tt}: invalid applicability {app!r}")
+    if ex not in STATUSES:
+        errors.append(f"{tt}: invalid execution_status {ex!r}")
+    art = t.get("artifact_path")
+    if app in ("applicable", "planned"):
+        if not isinstance(art, str) or not re.fullmatch(
+                rf"sql/{track.replace('_sql', '')}/chapter-\d\d/[A-Za-z0-9._-]+", art) or _safe_rel(art):
+            errors.append(f"{tt}: {app} requires artifact_path under sql/{track.replace('_sql', '')}/chapter-NN/, found {art!r}")
+    elif art is not None:
+        errors.append(f"{tt}: {app} entries must have artifact_path null")
+    if app == "not_applicable" and not _nonempty(t.get("rationale")):
+        errors.append(f"{tt}: not_applicable requires a rationale")
+    if app in ("not_applicable", "unresolved") and ex != "not_started":
+        errors.append(f"{tt}: {app} entries must have execution_status not_started")
+    if ex in ("drafted", "executed_unreviewed", "verified") and isinstance(art, str):
+        check_repo_path(root, art, tt, "artifact_path", errors)
+    if ex in ("executed_unreviewed", "verified"):
+        if not _nonempty(t.get("evidence")):
+            errors.append(f"{tt}: {ex} requires non-empty evidence")
+    if t.get("evidence") is not None and not isinstance(t.get("evidence"), list):
+        errors.append(f"{tt}: evidence must be a list")
+    elif t.get("evidence"):
+        check_evidence_paths(root, t["evidence"], tt, errors)
+    if ex == "verified" and not _nonempty(t.get("reviewed_by")):
+        errors.append(f"{tt}: verified requires reviewed_by")
+    if track == "mysql":
+        if t.get("target_version") != "8.0":
+            errors.append(f"{tt}: target_version must be '8.0'")
+        if _nonempty(t.get("observed_version")) and not _nonempty(t.get("evidence")):
+            errors.append(f"{tt}: observed_version requires evidence")
+        if "semantic_notes" not in t:
+            errors.append(f"{tt}: missing semantic_notes")
 
 
 def check_docs_in_sync(root, errors):
@@ -438,6 +556,7 @@ def validate(root, strict=False):
     chapter_ids = check_chapters(_load_json(root, "chapters.json", errors), errors)
     recipes = check_recipes(root, _load_json(root, "recipes.json", errors), chapter_ids, errors)
     check_notes_consistency(root, recipes, errors)
+    check_sql_companion(root, recipes, errors)
     check_compatibility(_load_json(root, "compatibility.json", errors), errors)
     check_versions(_load_json(root, "versions.json", errors), errors)
     if (root / "catalog" / "labs.json").exists():

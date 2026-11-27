@@ -49,6 +49,19 @@ Select **Run all**. The cells run top to bottom.
 
 The output of the report cell should contain one `PASS <check>` line for each of the five checks (`in_memory_rows`, `filter_rows`, `groupby_counts`, `csv_roundtrip`, `delta_roundtrip`), then `OVERALL: PASS`. The first lines print the Spark version. Any `FAIL` line, or an error in a cell, means the run did not pass. Common causes are a catalog or schema you cannot write to, or a missing permission to create a volume. Record what you see honestly, including failures.
 
+## Steps in short
+
+1. Import `labs/chapter-01/00-smoke-test.py` as a notebook.
+2. Attach serverless compute.
+3. Set the `catalog`, `schema` and `volume` widgets to values you may write to.
+4. Select **Run all**.
+5. Read the report cell. Every check line should say `PASS` and the last line `OVERALL: PASS`. Any `FAIL` or cell error means the run did not pass.
+6. Confirm the cleanup output shows no warnings. If it prints a warning with the run id, remove the leftovers by hand.
+7. Record evidence with `templates/evidence-record.md` (see below).
+8. Open a pull request and ask for review.
+
+This notebook has not been executed yet by anyone. Nothing here is verified.
+
 ## Capture evidence
 
 1. Take a screenshot of the report cell output, or export the notebook as HTML (**File**, **Export**, **HTML**; verify against current UI).

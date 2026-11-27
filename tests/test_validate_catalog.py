@@ -367,6 +367,76 @@ class TestHardening(CatalogCase):
         self.assertFalse(any("possible databricks token" in e for e in errs), "must not follow symlink")
 
 
+class TestKnowledgeGovernance(CatalogCase):
+    NOTE = "notes/chapter-01/1.1-read-csv-data.md"
+
+    def edit_note(self, old, new):
+        path = self.root / self.NOTE
+        text = path.read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+    def test_missing_new_key(self):
+        self.edit_note("concept_id:", "concept_idx:")
+        self.assertError("front matter missing keys")
+
+    def test_invalid_engine(self):
+        self.edit_note("implementation_engine: pyspark", "implementation_engine: oracle")
+        self.assertError("invalid implementation_engine")
+
+    def test_invalid_authorship(self):
+        self.edit_note("authorship: agent_generated", "authorship: robot")
+        self.assertError("invalid authorship")
+
+    def test_verification_status_must_mirror_status(self):
+        self.edit_note("verification_status: not_started", "verification_status: verified")
+        self.assertError("must mirror status")
+
+    def test_reflection_flag_must_be_bool(self):
+        self.edit_note("human_reflection_present: false", 'human_reflection_present: "no"')
+        self.assertError("human_reflection_present must be true or false")
+
+    def test_list_keys_must_be_lists(self):
+        self.edit_note("known_limitations: []", "known_limitations: none")
+        self.assertError("known_limitations must be a list")
+
+    def test_reflections_section_required(self):
+        self.edit_note("## My reflections (human-authored)", "## Notes")
+        self.assertError("missing section '## My reflections (human-authored)'")
+
+    def test_bad_concept_id(self):
+        self.edit_note('concept_id: "recipe-1.1"', 'concept_id: "Recipe 1.1"')
+        self.assertError("concept_id must be a stable lowercase id")
+
+    def test_verified_note_missing_engine_version_and_last_verified(self):
+        (self.root / "evidence").mkdir()
+        (self.root / "evidence" / "e.md").write_text("ok")
+        self.mutate_recipes(lambda rs: rs[0].update(
+            status="verified", evidence=["evidence/e.md"], reviewed_by="x", databricks_runtime="16.4",
+            last_verified="2026-01-01"))
+        self.edit_note("status: not_started", "status: verified")
+        self.edit_note("verification_status: not_started", "verification_status: verified")
+        self.edit_note("evidence_links: []", 'evidence_links: ["evidence/e.md"]')
+        errs, _ = self.errors()
+        for k in ("engine_version", "last_verified", "reviewer", "learning_objective"):
+            self.assertTrue(any(f"verified requires non-empty '{k}'" in e for e in errs), (k, errs))
+        self.assertTrue(any("cannot be purely agent_generated" in e for e in errs), errs)
+
+    def test_evidence_template_keys(self):
+        p = self.root / "templates" / "evidence-record.md"
+        p.write_text(p.read_text().replace("evidence_type: static_validation", "evidence_type: vibes"))
+        self.assertError("invalid evidence_type")
+
+    def test_evidence_template_missing_human_reviewer(self):
+        p = self.root / "templates" / "evidence-record.md"
+        p.write_text(p.read_text().replace("human_reviewer:", "reviewer:"))
+        self.assertError("front matter missing keys")
+
+    def test_sql_companion_file_required(self):
+        (self.root / "catalog" / "sql_companion.json").unlink()
+        self.assertError("sql_companion.json: file missing")
+
+
 class TestFrontMatter(unittest.TestCase):
     def test_parse(self):
         fm = V.parse_front_matter('---\na: "x"\nb: null\nc: []\nd:\n  - 1\n  - y\ne: [p, q]\n---\nbody')

@@ -6,6 +6,8 @@ Original, cloud-first labs that follow the topics of a Databricks data engineeri
 
 **No lab in this repo is verified.** Phase 0 provides the catalog, validators, templates and one Chapter 1 smoke test notebook. No notebook has been executed, and the authors had no Databricks access. Every status is `not_started` or `drafted`. Compatibility classes are preliminary.
 
+Phase 0.1 adds hardened validators, Kiro steering in `.kiro/steering/` (advisory, not shown to be loaded in any session), a deterministic policy check, a SQL companion catalog (Databricks SQL and MySQL 8.0, all `unresolved` or `not_applicable`, nothing executed), a SQL performance standard and an inactive MySQL workflow template. No MySQL benchmark has run and no workflow was dispatched. Recipe 1.1 is `not_started`.
+
 See the [coverage ledger](docs/coverage-ledger.md) for counts and gaps (63 of 72 recipes are evidenced upstream, 9 are unaccounted for).
 
 ## Quickstart
@@ -20,6 +22,7 @@ Local checks need only Python 3.11:
 python scripts/validate_catalog.py
 python scripts/generate_docs.py --check
 python scripts/lint_notebooks.py
+python scripts/check_policy.py
 python -m unittest discover -s tests -v
 ```
 
@@ -32,6 +35,12 @@ python -m unittest discover -s tests -v
 - [Provenance](docs/provenance.md)
 - [Testing requirements](docs/testing-requirements.md)
 - [Version drift](docs/version-drift.md)
+- [Learning workflow](docs/learning-workflow.md)
+- [Agent governance](docs/agent-governance.md)
+- [Knowledge governance](docs/knowledge-governance.md)
+- [SQL companion curriculum](docs/sql-companion.md)
+- [SQL performance standard](docs/sql-performance-standard.md)
+- [MySQL cloud execution design](docs/mysql-cloud-execution.md)
 - [Contributing](CONTRIBUTING.md)
 
 Catalog data lives in [catalog/](catalog/). Templates live in [templates/](templates/).

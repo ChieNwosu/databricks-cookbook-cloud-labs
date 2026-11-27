@@ -14,6 +14,16 @@ reviewer: null
 evidence_links: []
 tags: []
 llm_summary: ""
+concept_id: "recipe-0.0"
+learning_objective: ""
+implementation_engine: pyspark
+engine_version: null
+verification_status: not_started
+known_limitations: []
+related_concepts: []
+revalidation_triggers: []
+authorship: agent_generated
+human_reflection_present: false
 ---
 
 # Recipe title
@@ -47,3 +57,7 @@ Link evidence records (see templates/evidence-record.md). Leave empty until a re
 ## Drift notes
 
 Differences between upstream versions and the Databricks runtime observed.
+
+## My reflections (human-authored)
+
+Written by the human only. Agents must not edit this section.
