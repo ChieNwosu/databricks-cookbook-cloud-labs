@@ -20,10 +20,13 @@ Never commit tokens, keys, passwords, workspace URLs with personal data or email
 python scripts/generate_docs.py
 python scripts/validate_catalog.py
 python scripts/lint_notebooks.py
+python scripts/check_policy.py
 python -m unittest discover -s tests -v
 ```
 
 `executed_unreviewed` and `verified` entries need existing evidence files under `evidence/`. A note's front matter must match its catalog entry. See [docs/testing-requirements.md](docs/testing-requirements.md).
+
+`check_policy.py` checks steering frontmatter, em dashes in docs, workflow permissions and the inactive MySQL template. See [docs/agent-governance.md](docs/agent-governance.md). Notes carry the knowledge-governance keys described in [docs/knowledge-governance.md](docs/knowledge-governance.md), and `catalog/sql_companion.json` follows [docs/sql-companion.md](docs/sql-companion.md).
 
 Edit `catalog/*.json` by hand, then regenerate the docs. CI runs the same checks.
 

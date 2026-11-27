@@ -21,5 +21,7 @@ jobs:
         run: python scripts/generate_docs.py --check
       - name: Lint notebooks
         run: python scripts/lint_notebooks.py
+      - name: Policy check
+        run: python scripts/check_policy.py
       - name: Unit tests
         run: python -m unittest discover -s tests -v

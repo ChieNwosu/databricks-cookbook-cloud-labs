@@ -1,0 +1,67 @@
+# INACTIVE TEMPLATE. Not under .github/workflows, never dispatched, never run.
+# Activating this needs explicit human approval. Paid runners, external databases
+# and new cloud resources need separate approval. See docs/mysql-cloud-execution.md.
+name: mysql-benchmark-manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Scenario to run"
+        required: true
+        type: choice
+        options:
+          - correctness
+          - index-comparison
+      dataset_rows:
+        description: "Synthetic rows to generate (1 to 100000)"
+        required: true
+        default: "10000"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inputs
+        env:
+          DATASET_ROWS: ${{ inputs.dataset_rows }}
+        run: |
+          case "$DATASET_ROWS" in
+            ''|*[!0-9]*) echo "dataset_rows must be an integer"; exit 1 ;;
+          esac
+          if [ "$DATASET_ROWS" -lt 1 ] || [ "$DATASET_ROWS" -gt 100000 ]; then
+            echo "dataset_rows must be between 1 and 100000"; exit 1
+          fi
+      - name: Start the preinstalled MySQL service
+        run: |
+          sudo systemctl start mysql.service
+          # The runner default root login is not a real credential. No secrets are used.
+          mysql -uroot -proot -e "SELECT VERSION();" | tee version.txt
+      - name: Create an ephemeral database and deterministic synthetic fixture
+        env:
+          DATASET_ROWS: ${{ inputs.dataset_rows }}
+        run: |
+          mysql -uroot -proot -e "CREATE DATABASE bench_run;"
+          # Fixture generator (fixed seed) lives under sql/fixtures/ once a human adds it.
+      - name: Run the scenario and sanitize plans
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          mkdir -p out
+          cp version.txt out/mysql-version.txt
+          # Run sql/mysql scripts for the chosen scenario, then strip hostnames, paths and users
+          # from EXPLAIN output before it is written to out/.
+      - name: Drop the database
+        if: always()
+        run: mysql -uroot -proot -e "DROP DATABASE IF EXISTS bench_run;"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mysql-benchmark-evidence
+          path: out/
+          retention-days: 3

@@ -37,4 +37,8 @@ Recipes of class `alt_env` cannot be `verified` without evidence from the altern
 
 `python scripts/validate_catalog.py --strict` fails on purpose: 63 recipes are evidenced against an expected total of 72. The total comes from the user's statement and has not been reconciled with the physical book's table of contents. `catalog/coverage_gaps.json` names six unconfirmed IDs (8.2, 8.3, 9.2, 10.1, 10.3, 11.2) and notes that chapter 7 may have recipes after 7.4. That does not add up to a confirmed list of nine, so the missing IDs and titles stay unknown until the human supplies the table of contents. The expected total is not lowered and no entries are invented to make strict mode pass.
 
+## Policy and SQL companion checks
+
+`python scripts/check_policy.py` verifies the nine `.kiro/steering/` files (valid `inclusion`, core files `always`), no em dashes in docs and templates, no secret-like text in steering, read-only workflow permissions, no `pull_request_target`, only `GITHUB_TOKEN` secrets, MySQL workflows restricted to `workflow_dispatch` with a timeout and artifact retention of 7 days or less, and that `templates/sql-benchmark.md` is `not_started`. `validate_catalog.py` also validates `catalog/sql_companion.json` (applicability separate from execution status) and the knowledge-governance note keys. `tests/test_policy.py` holds the negative tests. These checks cannot show that an agent obeys steering or that evidence is genuine. See [agent-governance.md](agent-governance.md).
+
 Automated checks never replace a real Databricks run or human review.
