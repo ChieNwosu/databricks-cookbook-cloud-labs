@@ -39,7 +39,7 @@ If the Git folder option is not offered on Free Edition, use Option B.
 
 ## 4. Check the widgets
 
-The notebook creates three widgets at the top: `catalog`, `schema` and `volume`. The defaults are `workspace`, `default` and `cookbook_smoke_test`. These defaults are **to be confirmed on Free Edition**. Open **Catalog** in the sidebar to see which catalog and schema you can write to, and change the widgets if needed. The notebook runs `CREATE VOLUME IF NOT EXISTS` for the volume name you give it.
+The notebook creates three widgets at the top: `catalog`, `schema` and `volume`. The defaults are `workspace`, `default` and `cookbook_smoke_test`. These defaults are **to be confirmed on Free Edition**. Open **Catalog** in the sidebar to see which catalog and schema you can write to, and change the widgets if needed. The notebook runs `CREATE VOLUME IF NOT EXISTS` for the volume name you give it. Each run gets a unique 8 character run id. It writes only to `smoke_<run id>` inside the volume and to a table named `cookbook_smoke_<run id>`. A `finally` block removes only those, and drops the volume only if this run created it and it is empty. If a check fails, the failure is raised after cleanup. If cleanup itself fails, the notebook prints a warning with the run id so you can remove the leftovers by hand.
 
 ## 5. Run all
 

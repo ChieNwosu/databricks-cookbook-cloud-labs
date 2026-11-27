@@ -12,6 +12,10 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import secret_patterns  # noqa: E402  (shared best-effort scanner)
+
 DEFAULT_ROOT = HERE.parent
 HEADER = "# Databricks notebook source"
 SEPARATOR = "# COMMAND ----------"
@@ -19,10 +23,6 @@ FORBIDDEN = [
     ("spark.master config", re.compile(r"spark\.master")),
     ("sparkContext use", re.compile(r"sparkContext")),
     ("DBFS root path", re.compile(r"dbfs:/|/dbfs/|/FileStore")),
-    ("databricks token", re.compile(r"dapi[0-9a-f]{32}")),
-    ("aws access key", re.compile(r"AKIA[0-9A-Z]{16}")),
-    ("bearer token", re.compile(r"Bearer [A-Za-z0-9._~+/=-]{20,}")),
-    ("hard-coded secret", re.compile(r"(?i)\b(?:password|token|secret|api_key)\s*=\s*[\"'][^\"']+[\"']")),
     ("dbutils.secrets use", re.compile(r"dbutils\.secrets")),
 ]
 
@@ -61,6 +61,8 @@ def lint_text(text, name="notebook"):
         for label, rx in FORBIDDEN:
             if rx.search(line):
                 errors.append(f"{name}:{n}: forbidden pattern: {label}")
+        for label in secret_patterns.scan_text(line, ".py"):
+            errors.append(f"{name}:{n}: forbidden pattern: {label} (best-effort scan)")
     if not any(ln.startswith("# MAGIC %md") for ln in lines):
         errors.append(f"{name}: no markdown cell found")
     return errors

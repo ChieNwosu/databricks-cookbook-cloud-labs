@@ -15,7 +15,7 @@
         "sample-csv-dataset",
         "unity-catalog-volume"
       ],
-      "status": "drafted",
+      "status": "not_started",
       "evidence": [],
       "reviewed_by": null,
       "databricks_runtime": null,
@@ -731,7 +731,12 @@
       "evidence": [],
       "reviewed_by": null,
       "databricks_runtime": null,
-      "last_verified": null
+      "last_verified": null,
+      "classification_unresolved": {
+        "question": "Free Edition is serverless only and the Spark UI is not available there; the query profile is the documented substitute. Does the query profile satisfy this recipe's learning objective, or does the recipe need an alternative environment? Human decision required.",
+        "source": "https://docs.databricks.com/aws/en/compute/serverless/limitations",
+        "retrieved": "2026-11"
+      }
     },
     {
       "id": "6.2",

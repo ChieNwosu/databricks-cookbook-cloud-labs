@@ -86,8 +86,9 @@ def matrix():
     for r in recipes:
         reason = r["adaptation_notes"].split("Classification reason: ", 1)[-1]
         deps = ", ".join(r["dependencies"]) or "none"
+        alt = "unresolved" if r.get("classification_unresolved") and not r["requires_alt_env"] else ("yes" if r["requires_alt_env"] else "no")
         out.append(
-            f"| {r['id']} | {esc(r['title'])} | {r['compatibility']} | {'yes' if r['requires_alt_env'] else 'no'} | {esc(deps)} | {esc(reason)} |"
+            f"| {r['id']} | {esc(r['title'])} | {r['compatibility']} | {alt} | {esc(deps)} | {esc(reason)} |"
         )
     out.append("")
     return "\n".join(out)

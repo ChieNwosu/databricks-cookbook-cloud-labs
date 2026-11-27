@@ -12,7 +12,7 @@ Do not copy text, notebooks or data from the book or from the upstream Packt rep
 
 ## Secrets
 
-Never commit tokens, keys, passwords, workspace URLs with personal data or emails. The validator and notebook lint scan for common patterns.
+Never commit tokens, keys, passwords, workspace URLs with personal data or emails. The validator and notebook lint scan for common patterns (see `scripts/secret_patterns.py`). This is best effort and not comprehensive, so review your diff yourself.
 
 ## Before opening a pull request
 
@@ -22,6 +22,8 @@ python scripts/validate_catalog.py
 python scripts/lint_notebooks.py
 python -m unittest discover -s tests -v
 ```
+
+`executed_unreviewed` and `verified` entries need existing evidence files under `evidence/`. A note's front matter must match its catalog entry. See [docs/testing-requirements.md](docs/testing-requirements.md).
 
 Edit `catalog/*.json` by hand, then regenerate the docs. CI runs the same checks.
 

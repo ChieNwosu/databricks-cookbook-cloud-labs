@@ -26,8 +26,14 @@ class LintTests(unittest.TestCase):
         self.assertEqual(ln.lint_text(GOOD + "\n# COMMAND ----------\n\n# MAGIC %sql\n# MAGIC select 1\n"), [])
 
     def test_forbidden(self):
-        for bad in ('spark.conf.set("spark.master", "x")', "sc = spark.sparkContext", 'token = "abc"',
+        for bad in ('spark.conf.set("spark.master", "x")', "sc = spark.sparkContext", 'tok' + 'en = "abc"',
                     'p = "dbfs:/tmp"', "k = 'dapi" + "0" * 32 + "'"):
+            with self.subTest(bad=bad):
+                self.assertTrue(any("forbidden" in e for e in ln.lint_text(GOOD + bad + "\n")))
+
+    def test_shared_patterns_flag_in_notebooks(self):
+        for bad in ("x = '" + "gh" + "p_" + "A1" * 18 + "'", "u = 'mysql://" + "a:" + "b" + "@h/x'",
+                    "h = 'adb-" + "1234567890123456.7.azure" + "databricks.net'", "m = 'a" + "@" + "corp-mail.test'"):
             with self.subTest(bad=bad):
                 self.assertTrue(any("forbidden" in e for e in ln.lint_text(GOOD + bad + "\n")))
 

@@ -10,9 +10,13 @@ import importlib.util
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import secret_patterns  # noqa: E402  (shared best-effort scanner, stdlib only)
+
 DEFAULT_ROOT = HERE.parent
 STATUSES = ["not_started", "drafted", "executed_unreviewed", "verified"]
 CLASSES = ["native", "adapted", "alt_env"]
@@ -24,14 +28,10 @@ NOTE_KEYS = [
     "evidence_links", "tags", "llm_summary",
 ]
 EVIDENCE_KEYS = ["recipe_id", "run_url", "screenshot_path", "date", "databricks_runtime", "reviewer", "result"]
-SECRET_PATTERNS = [
-    ("databricks token", re.compile(r"dapi[0-9a-f]{32}")),
-    ("aws access key", re.compile(r"AKIA[0-9A-Z]{16}")),
-    ("bearer token", re.compile(r"Bearer [A-Za-z0-9._~+/=-]{20,}")),
-    ("private key", re.compile(r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----")),
-]
 SKIP_DIRS = {".git", "__pycache__", ".agents", "node_modules"}
-TEXT_SUFFIXES = {".md", ".json", ".py", ".yml", ".yaml", ".txt", ".sql", ".ipynb", ".toml", ".cfg", ".ini", ".sh", ""}
+TEXT_SUFFIXES = {".md", ".json", ".py", ".yml", ".yaml", ".txt", ".sql", ".ipynb", ".toml", ".cfg", ".ini", ".sh",
+                 ".env", ".conf", ".properties", ""}
+UNRESOLVED_KEYS = ("question", "source", "retrieved")
 
 
 def parse_front_matter(text):
@@ -107,6 +107,54 @@ def _nonempty(v):
     return v is not None and v != "" and v != []
 
 
+def _safe_rel(rel):
+    """Return an error string if rel is not a plain repo-relative POSIX path, else None."""
+    if not isinstance(rel, str) or not rel.strip():
+        return "path must be a non-empty string"
+    if "\\" in rel or "\x00" in rel:
+        return "path must use '/' separators and no control characters"
+    if PurePosixPath(rel).is_absolute() or PureWindowsPath(rel).is_absolute() or PureWindowsPath(rel).drive:
+        return "absolute paths are not allowed"
+    if ".." in PurePosixPath(rel).parts:
+        return "'..' segments are not allowed"
+    return None
+
+
+def check_repo_path(root, rel, tag, field, errors, must_exist=True):
+    """Validate a repo-relative file path: safe syntax, resolves inside root, exists. True if OK."""
+    bad = _safe_rel(rel)
+    if bad:
+        errors.append(f"{tag}: unsafe {field} {rel!r}: {bad}")
+        return False
+    root_r = Path(root).resolve()
+    resolved = (Path(root) / rel).resolve()
+    if root_r != resolved and root_r not in resolved.parents:
+        errors.append(f"{tag}: unsafe {field} {rel!r}: resolves outside the repository")
+        return False
+    if must_exist and not (Path(root) / rel).is_file():
+        errors.append(f"{tag}: {field} not found: {rel}")
+        return False
+    return True
+
+
+def check_evidence_paths(root, paths, tag, errors):
+    """Shared by recipes, labs and notes: every path is safe, inside evidence/, and an existing file."""
+    ok = True
+    for ev in paths or []:
+        if not check_repo_path(root, ev, tag, "evidence path", errors, must_exist=False):
+            ok = False
+            continue
+        ev_root = (Path(root) / "evidence").resolve()
+        resolved = (Path(root) / ev).resolve()
+        if ev_root not in resolved.parents:
+            errors.append(f"{tag}: unsafe evidence path {ev!r}: must resolve inside evidence/")
+            ok = False
+        elif not resolved.is_file():
+            errors.append(f"{tag}: evidence file not found: {ev}")
+            ok = False
+    return ok
+
+
 def check_chapters(data, errors):
     if data is None:
         return set()
@@ -161,21 +209,69 @@ def check_recipes(root, data, chapter_ids, errors):
             errors.append(f"{tag}: requires_alt_env must be boolean")
         if not isinstance(r.get("evidence", []), list):
             errors.append(f"{tag}: evidence must be a list")
-        if r.get("status") == "verified":
+        status = r.get("status")
+        if status in ("executed_unreviewed", "verified"):
+            if not _nonempty(r.get("evidence")):
+                errors.append(f"{tag}: {status} requires non-empty 'evidence'")
+            if isinstance(r.get("evidence", []), list):
+                check_evidence_paths(root, r.get("evidence"), tag, errors)
+        if status == "verified":
             for k in ("evidence", "reviewed_by", "databricks_runtime", "last_verified"):
                 if not _nonempty(r.get(k)):
                     errors.append(f"{tag}: verified requires non-empty '{k}'")
-            for ev in r.get("evidence") or []:
-                if not (root / ev).is_file():
-                    errors.append(f"{tag}: evidence file not found: {ev}")
-        elif r.get("status") == "not_started" and r.get("evidence"):
+        elif status == "not_started" and r.get("evidence"):
             errors.append(f"{tag}: not_started recipe must not list evidence")
-        if r.get("compatibility") == "alt_env" and r.get("status") == "verified" and not r.get("evidence"):
+        if r.get("compatibility") == "alt_env" and status == "verified" and not r.get("evidence"):
             errors.append(f"{tag}: alt_env recipe cannot be verified without evidence")
+        _check_alt_env_consistency(r, tag, errors)
         for k in ("lab_path", "note_path"):
-            if r.get(k) and not (root / r[k]).is_file():
-                errors.append(f"{tag}: {k} not found: {r[k]}")
+            if r.get(k):
+                check_repo_path(root, r[k], tag, k, errors)
     return recipes
+
+
+def _check_alt_env_consistency(r, tag, errors):
+    compat, flag = r.get("compatibility"), r.get("requires_alt_env")
+    unresolved = r.get("classification_unresolved")
+    if unresolved is not None:
+        if not isinstance(unresolved, dict) or not all(_nonempty(unresolved.get(k)) for k in UNRESOLVED_KEYS):
+            errors.append(f"{tag}: classification_unresolved needs non-empty {list(UNRESOLVED_KEYS)}")
+            unresolved = None
+    if flag is True and compat != "alt_env":
+        errors.append(f"{tag}: requires_alt_env is true but compatibility is {compat!r}")
+    if compat == "alt_env" and flag is False and unresolved is None:
+        errors.append(f"{tag}: alt_env compatibility with requires_alt_env false needs a classification_unresolved record")
+
+
+def check_notes_consistency(root, recipes, errors):
+    """Notes must agree with the catalog entry that points at them."""
+    by_note = {}
+    for r in recipes:
+        if r.get("note_path"):
+            by_note[str(r["note_path"])] = r
+    notes = root / "notes"
+    if notes.is_dir():
+        for p in sorted(notes.rglob("*.md")):
+            rel = p.relative_to(root).as_posix()
+            if rel not in by_note:
+                errors.append(f"{rel}: note has no catalog recipe pointing at it via note_path")
+    for rel, r in by_note.items():
+        path = root / rel
+        if _safe_rel(rel) or not path.is_file():
+            continue  # reported by check_recipes
+        try:
+            fm = parse_front_matter(path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue  # reported by check_front_matter_files
+        for fk, ck in (("recipe_id", "id"), ("chapter", "chapter"), ("title", "title"),
+                       ("compatibility", "compatibility"), ("status", "status")):
+            if fm.get(fk) != r.get(ck):
+                errors.append(f"{rel}: front matter {fk} {fm.get(fk)!r} disagrees with catalog {r.get(ck)!r}")
+        if r.get("status") in ("executed_unreviewed", "verified"):
+            if not _nonempty(fm.get("evidence_links")):
+                errors.append(f"{rel}: {r['status']} note requires non-empty evidence_links")
+            if fm.get("evidence_links") != r.get("evidence"):
+                errors.append(f"{rel}: evidence_links disagree with catalog evidence")
 
 
 def check_compatibility(data, errors):
@@ -199,14 +295,17 @@ def check_labs(root, data, errors):
         return
     for lab in labs:
         tag = f"lab {lab.get('id')}"
-        if not (root / str(lab.get("path", ""))).is_file():
-            errors.append(f"{tag}: path not found: {lab.get('path')}")
+        check_repo_path(root, lab.get("path", ""), tag, "path", errors)
+        if lab.get("guide"):
+            check_repo_path(root, lab["guide"], tag, "guide", errors)
         if lab.get("status") not in STATUSES:
             errors.append(f"{tag}: invalid status {lab.get('status')!r}")
         if lab.get("compatibility") not in CLASSES:
             errors.append(f"{tag}: invalid compatibility {lab.get('compatibility')!r}")
         if lab.get("status") in ("executed_unreviewed", "verified") and not lab.get("evidence"):
             errors.append(f"{tag}: {lab.get('status')} requires evidence")
+        if lab.get("status") in ("executed_unreviewed", "verified") and isinstance(lab.get("evidence"), list):
+            check_evidence_paths(root, lab.get("evidence"), tag, errors)
         if lab.get("status") == "verified":
             for k in ("reviewed_by", "databricks_runtime", "last_verified"):
                 if not _nonempty(lab.get(k)):
@@ -292,23 +391,44 @@ def check_docs_in_sync(root, errors):
             errors.append(f"{rel}: out of date, run python scripts/generate_docs.py")
 
 
+def _outside_root(root, p):
+    try:
+        resolved = p.resolve()
+    except (OSError, RuntimeError):
+        return True
+    root_r = Path(root).resolve()
+    return resolved != root_r and root_r not in resolved.parents
+
+
 def iter_text_files(root):
     for p in sorted(root.rglob("*")):
-        if not p.is_file() or any(part in SKIP_DIRS for part in p.relative_to(root).parts):
+        if any(part in SKIP_DIRS for part in p.relative_to(root).parts):
+            continue
+        if p.is_symlink() and _outside_root(root, p):
+            continue  # reported by check_unsafe_paths, never followed
+        if not p.is_file():
             continue
         if p.suffix.lower() in TEXT_SUFFIXES:
             yield p
 
 
+def check_unsafe_paths(root, errors):
+    for p in sorted(root.rglob("*")):
+        if any(part in SKIP_DIRS for part in p.relative_to(root).parts):
+            continue
+        if p.is_symlink() and _outside_root(root, p):
+            errors.append(f"{p.relative_to(root)}: unsafe symlink resolving outside the repository")
+
+
 def check_secrets(root, errors):
+    """Best-effort pattern scan. Not comprehensive; see scripts/secret_patterns.py."""
     for p in iter_text_files(root):
         try:
             text = p.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        for label, rx in SECRET_PATTERNS:
-            if rx.search(text):
-                errors.append(f"{p.relative_to(root)}: possible {label}")
+        for label in secret_patterns.scan_text(text, p.suffix.lower()):
+            errors.append(f"{p.relative_to(root)}: possible {label}")
 
 
 def validate(root, strict=False):
@@ -317,6 +437,7 @@ def validate(root, strict=False):
     errors, warnings = [], []
     chapter_ids = check_chapters(_load_json(root, "chapters.json", errors), errors)
     recipes = check_recipes(root, _load_json(root, "recipes.json", errors), chapter_ids, errors)
+    check_notes_consistency(root, recipes, errors)
     check_compatibility(_load_json(root, "compatibility.json", errors), errors)
     check_versions(_load_json(root, "versions.json", errors), errors)
     if (root / "catalog" / "labs.json").exists():
@@ -331,6 +452,7 @@ def validate(root, strict=False):
             (errors if strict else warnings).append(msg)
     check_front_matter_files(root, errors)
     check_docs_in_sync(root, errors)
+    check_unsafe_paths(root, errors)
     check_secrets(root, errors)
     return errors, warnings
 

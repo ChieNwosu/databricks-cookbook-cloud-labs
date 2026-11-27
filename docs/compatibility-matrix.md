@@ -68,7 +68,7 @@ Source: [Databricks Free Edition limitations](https://docs.databricks.com/aws/en
 | 5.4 | Join stream with static data | adapted | no | streaming-source-replacement | Portable once source replaced. (preliminary, unverified against Free Edition limits) |
 | 5.5 | Join two streams | adapted | no | streaming-source-replacement | Portable once both sources replaced. (preliminary, unverified against Free Edition limits) |
 | 5.6 | Monitor streaming queries | adapted | no | streaming-source-replacement | Query progress APIs may work; listener and UI features may differ on serverless. (preliminary, unverified against Free Edition limits) |
-| 6.1 | Monitor with the Spark UI | alt_env | no | none | Serverless has no classic Spark UI; query profile is the substitute. (preliminary, unverified against Free Edition limits) |
+| 6.1 | Monitor with the Spark UI | alt_env | unresolved | none | Serverless has no classic Spark UI; query profile is the substitute. (preliminary, unverified against Free Edition limits) |
 | 6.2 | Broadcast variables and joins | adapted | no | none | Broadcast variables via sparkContext are unsupported on serverless; broadcast join hints are fine. (preliminary, unverified against Free Edition limits) |
 | 6.3 | Optimize shuffles | adapted | no | none | Many Spark configs cannot be set on serverless. (preliminary, unverified against Free Edition limits) |
 | 6.4 | Avoid data skew | adapted | no | none | Technique portable; config tuning limited on serverless. (preliminary, unverified against Free Edition limits) |

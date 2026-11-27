@@ -6,8 +6,8 @@ Status values: not_started, drafted, executed_unreviewed, verified. Nothing is m
 
 | Status | Count |
 | --- | --- |
-| not_started | 62 |
-| drafted | 1 |
+| not_started | 63 |
+| drafted | 0 |
 | executed_unreviewed | 0 |
 | verified | 0 |
 | total | 63 |
@@ -20,7 +20,7 @@ Upstream folder: `Chapter01`. Theme: Reading and writing common file formats.
 
 | ID | Title | Class | Status | Upstream path |
 | --- | --- | --- | --- | --- |
-| 1.1 | Read CSV data | adapted | drafted | `Chapter01/1.1 read-csv-data.ipynb` |
+| 1.1 | Read CSV data | adapted | not_started | `Chapter01/1.1 read-csv-data.ipynb` |
 | 1.2 | Read JSON data | adapted | not_started | `Chapter01/1.2 read-json-data.ipynb` |
 | 1.3 | Read Parquet data | adapted | not_started | `Chapter01/1.3 read-parquet-data.ipynb` |
 | 1.4 | Read XML data | adapted | not_started | `Chapter01/1.4 read-xml-data.ipynb` |

@@ -8,5 +8,5 @@ Source notebooks are Databricks source-format Python files (`.py`).
 4. Second cell defines parameters (catalog, schema, volume path) in one place. No hard-coded workspace names, tokens or user emails.
 5. Every cell must be re-runnable. Create data the lab needs inside the notebook or from a volume you populate yourself.
 6. No outputs are committed. Do not paste results into the notebook.
-7. Last cell cleans up objects the lab created.
+7. Cleanup of objects the lab created runs in a `finally` block, in the same cell as the work, so a failure cannot skip it. Only remove run-scoped resources that this run created.
 8. Code must be original and compile with `python -m py_compile` after magic lines are ignored.
