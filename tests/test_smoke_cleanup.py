@@ -74,6 +74,7 @@ class FakeWriter:
 
     def mode(self, m):
         self.m = m
+        self.df.spark.modes.append(m)
         return self
 
     def option(self, *_):
@@ -115,7 +116,8 @@ class FakeSpark:
         self.files, self.tables, self.queries = {}, {}, []
         self.volumes = {"unrelated_volume"} | ({"cookbook_smoke_test"} if volume_exists else set())
         self.lookup_fails = lookup_fails
-        self.fail_read = self.fail_write = False
+        self.fail_read = self.fail_write = self.fail_create_volume = False
+        self.modes = []
         self.wrong_rows = False
 
     @property
@@ -137,6 +139,8 @@ class FakeSpark:
                 raise RuntimeError("lookup failed")
             out.rows = [{"1": 1}] if "cookbook_smoke_test" in self.volumes else []
         elif q.startswith("CREATE VOLUME"):
+            if self.fail_create_volume:
+                raise RuntimeError("injected create volume failure")
             self.volumes.add("cookbook_smoke_test")
         elif q.startswith("DROP VOLUME"):
             self.volumes.discard("cookbook_smoke_test")
@@ -173,15 +177,19 @@ class FakeDbutils:
         self.fs, self.widgets = FakeFs(spark, rm_fails), FakeWidgets()
 
 
-def run_notebook(spark, rm_fails=False):
-    """Exec the code cells in order. Returns (namespace, stdout, exception or None)."""
+def run_notebook(spark, rm_fails=False, overrides=None):
+    """Exec the code cells in order. Returns (namespace, stdout, exception or None, dbutils).
+
+    overrides is applied to the namespace after the first (parameter) cell."""
     dbu = FakeDbutils(spark, rm_fails)
     ns = {"spark": spark, "dbutils": dbu, "__name__": "mock_notebook"}
     buf, exc = io.StringIO(), None
     with contextlib.redirect_stdout(buf):
         try:
-            for cell in code_cells():
+            for i, cell in enumerate(code_cells()):
                 exec(compile(cell, str(NOTEBOOK), "exec"), ns)
+                if i == 0 and overrides:
+                    ns.update(overrides)
         except Exception as e:  # the notebook is expected to raise on failure
             exc = e
     return ns, buf.getvalue(), exc, dbu
@@ -297,6 +305,68 @@ class MockHarness(unittest.TestCase):
         self.assertIsInstance(exc, RuntimeError)
         self.assertIn("csv_roundtrip", str(exc))
         self.assertIn("WARNING: path cleanup failed", out)
+
+    ROOT_VOL = "/Volumes/workspace/default/cookbook_smoke_test"
+
+    def drops(self, sp, kind):
+        return [q for q in sp.queries if q.startswith("DROP " + kind)]
+
+    def test_table_not_dropped_when_failure_precedes_table_creation(self):
+        sp = FakeSpark()
+        sp.fail_write = True  # CSV write fails, so the table is never created
+        ns, out, exc, dbu = run_notebook(sp)
+        self.assertIsInstance(exc, RuntimeError)
+        self.assertEqual(self.drops(sp, "TABLE"), [])
+
+    def test_nothing_removed_when_failure_precedes_path_creation(self):
+        sp = FakeSpark()
+        sp.fail_create_volume = True  # fails before the run directory is written
+        ns, out, exc, dbu = run_notebook(sp)
+        self.assertIsInstance(exc, RuntimeError)
+        self.assertEqual(dbu.fs.rm_calls, [])
+        self.assertEqual(self.drops(sp, "TABLE"), [])
+        self.assertEqual(self.drops(sp, "VOLUME"), [])
+
+    def test_created_volume_kept_when_not_empty(self):
+        sp = FakeSpark(volume_exists=False)
+        sp.files[f"{self.ROOT_VOL}/someone_else/data.csv"] = [{"a": 1}]
+        ns, out, exc, dbu = run_notebook(sp)
+        self.assertIsNone(exc, out)
+        self.assertEqual(self.drops(sp, "VOLUME"), [])
+        self.assertIn("cookbook_smoke_test", sp.volumes)
+        self.assertIn("is not empty and was kept", out)
+        self.assertIn(f"{self.ROOT_VOL}/someone_else/data.csv", sp.files)
+
+    def test_writes_use_errorifexists(self):
+        sp = FakeSpark()
+        ns, out, exc, dbu = run_notebook(sp)
+        self.assertIsNone(exc, out)
+        self.assertEqual(sp.modes, ["errorifexists", "errorifexists"])
+
+    def test_safe_rm_refuses_paths_outside_run_dir(self):
+        ns = run_notebook(FakeSpark())[0]
+        dbu = ns["dbutils"]
+        before = len(dbu.fs.rm_calls)
+        for bad in (self.ROOT_VOL, f"{self.ROOT_VOL}/user_data", ns["run_dir"] + "_sibling", "/Volumes"):
+            with self.subTest(path=bad):
+                with self.assertRaises(RuntimeError):
+                    ns["safe_rm"](bad)
+        self.assertEqual(len(dbu.fs.rm_calls), before)
+        ns["safe_rm"](ns["run_dir"] + "/people_csv")  # inside the run directory is allowed
+
+    def test_table_drop_refused_when_name_is_not_run_scoped(self):
+        sp = FakeSpark()
+        ns, out, exc, dbu = run_notebook(sp, overrides={"delta_table": "workspace.default.people"})
+        self.assertEqual(self.drops(sp, "TABLE"), [])
+        self.assertIn("refusing to drop a table that is not run-scoped", out)
+        self.assertIn("workspace.default.people", sp.tables)
+
+    def test_lookup_failure_is_reported_as_warning(self):
+        sp = FakeSpark(volume_exists=False, lookup_fails=True)
+        ns, out, exc, dbu = run_notebook(sp)
+        self.assertIsNone(exc, out)
+        self.assertIn("WARNING: volume lookup failed", out)
+        self.assertEqual(self.drops(sp, "VOLUME"), [])
 
     def test_run_ids_differ_between_runs(self):
         a = run_notebook(FakeSpark())[0]["run_id"]

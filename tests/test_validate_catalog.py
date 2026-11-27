@@ -37,6 +37,17 @@ class CatalogCase(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def write_evidence(self, name="1.1.md", **overrides):
+        """Write a structurally valid, synthetic evidence record under evidence/. Not a real run."""
+        fm = {"recipe_id": "1.2", "engine": "pyspark", "engine_version": "x", "evidence_type": "cloud_execution",
+              "run_url": "", "screenshot_path": "", "date": "2026-01-01", "databricks_runtime": "16.4",
+              "sanitized": "true", "human_reviewer": "reviewer", "result": "pass"}
+        fm.update(overrides)
+        (self.root / "evidence").mkdir(exist_ok=True)
+        body = "".join(f'{k}: {v if v in ("true", "false") else json.dumps(v)}\n' for k, v in fm.items())
+        (self.root / "evidence" / name).write_text("---\n" + body + "---\n\n# Evidence record\n")
+        return f"evidence/{name}"
+
     def read(self, name):
         return json.loads((self.root / "catalog" / name).read_text())
 
@@ -118,8 +129,7 @@ class TestValidator(CatalogCase):
         self.assertError("evidence file not found")
 
     def test_verified_with_real_evidence_passes(self):
-        (self.root / "evidence").mkdir()
-        (self.root / "evidence" / "1.1.md").write_text("ok")
+        self.write_evidence("1.1.md")
         self.mutate_recipes(lambda rs: rs[1].update(  # recipe without a note, so no note must agree
             status="verified", evidence=["evidence/1.1.md"], reviewed_by="x",
             databricks_runtime="16.4", last_verified="2026-01-01"))
@@ -185,10 +195,8 @@ class TestValidator(CatalogCase):
 class TestHardening(CatalogCase):
     """Negative tests for the Phase 0 review findings. Secret values are synthetic and built by concatenation."""
 
-    def evidence_file(self, name="1.1.md"):
-        (self.root / "evidence").mkdir(exist_ok=True)
-        (self.root / "evidence" / name).write_text("ok")
-        return f"evidence/{name}"
+    def evidence_file(self, name="1.1.md", **overrides):
+        return self.write_evidence(name, **overrides)
 
     # finding 1
     def test_executed_unreviewed_without_evidence(self):
@@ -367,6 +375,123 @@ class TestHardening(CatalogCase):
         self.assertFalse(any("possible databricks token" in e for e in errs), "must not follow symlink")
 
 
+class TestReviewV1(CatalogCase):
+    """Negative tests added for review v1 findings 3, 4 and 5."""
+
+    def executed(self, ev, status="executed_unreviewed", idx=1, **extra):
+        extra.setdefault("reviewed_by", "x")
+        extra.setdefault("databricks_runtime", "16.4")
+        extra.setdefault("last_verified", "2026-01-01")
+        self.mutate_recipes(lambda rs: rs[idx].update(status=status, evidence=[ev], **extra))
+
+    def test_readme_placeholder_rejected_as_evidence(self):
+        (self.root / "evidence" / "chapter-01").mkdir(parents=True)
+        (self.root / "evidence" / "chapter-01" / "README.md").write_text("placeholder")
+        self.executed("evidence/chapter-01/README.md")
+        self.assertError("is a README placeholder")
+
+    def test_evidence_without_front_matter_rejected(self):
+        (self.root / "evidence").mkdir()
+        (self.root / "evidence" / "plain.md").write_text("ok")
+        self.executed("evidence/plain.md")
+        self.assertError("no valid evidence-record front matter")
+
+    def test_evidence_missing_keys_rejected(self):
+        (self.root / "evidence").mkdir()
+        (self.root / "evidence" / "short.md").write_text("---\nrecipe_id: \"1.2\"\n---\n")
+        self.executed("evidence/short.md")
+        self.assertError("front matter missing keys")
+
+    def test_static_evidence_type_cannot_support_executed(self):
+        self.executed(self.write_evidence("s.md", evidence_type="static_validation"))
+        self.assertError("only ['cloud_execution', 'human_verification'] support executed_unreviewed")
+
+    def test_unsanitized_evidence_rejected(self):
+        self.executed(self.write_evidence("u.md", sanitized="false"))
+        self.assertError("must have sanitized: true")
+
+    def test_sanitized_must_be_boolean_true_not_string(self):
+        ev = self.write_evidence("q.md")
+        path = self.root / ev
+        path.write_text(path.read_text().replace("sanitized: true", 'sanitized: "true"'))
+        self.executed(ev)
+        self.assertError("must have sanitized: true")
+
+    def test_verified_needs_human_reviewer_in_record(self):
+        self.executed(self.write_evidence("v.md", human_reviewer=""), status="verified")
+        self.assertError("needs a human_reviewer for verified")
+
+    def test_executed_unreviewed_does_not_need_reviewer_in_record(self):
+        self.executed(self.write_evidence("r.md", human_reviewer=""))
+        errs, _ = self.errors()
+        self.assertFalse([e for e in errs if "recipe 1.2" in e], errs)
+
+    def test_lab_evidence_content_checked(self):
+        (self.root / "evidence").mkdir()
+        (self.root / "evidence" / "plain.md").write_text("ok")
+        data = self.read("labs.json")
+        data["labs"][0].update(status="executed_unreviewed", evidence=["evidence/plain.md"])
+        self.write("labs.json", data)
+        self.assertError("lab 1.0: evidence evidence/plain.md has no valid evidence-record front matter")
+
+    def test_symlinked_lab_path_outside_repo(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        (Path(outside.name) / "x.py").write_text("x = 1\n")
+        (self.root / "labs" / "chapter-01" / "link.py").symlink_to(Path(outside.name) / "x.py")
+        data = self.read("labs.json")
+        data["labs"][0]["path"] = "labs/chapter-01/link.py"
+        self.write("labs.json", data)
+        self.assertError("resolves outside the repository")
+
+    def test_symlinked_note_path_outside_repo(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        src = self.root / "notes" / "chapter-01" / "1.1-read-csv-data.md"
+        (Path(outside.name) / "n.md").write_text(src.read_text())
+        (self.root / "notes" / "chapter-01" / "link.md").symlink_to(Path(outside.name) / "n.md")
+        self.mutate_recipes(lambda rs: rs[0].update(note_path="notes/chapter-01/link.md"))
+        self.assertError("recipe 1.1: unsafe note_path 'notes/chapter-01/link.md': resolves outside the repository")
+
+    def test_note_evidence_links_differ_from_catalog_evidence(self):
+        a = self.write_evidence("a.md")
+        b = self.write_evidence("b.md")
+        self.executed(a, idx=0)
+        note = self.root / "notes" / "chapter-01" / "1.1-read-csv-data.md"
+        t = note.read_text()
+        t = t.replace("status: not_started", "status: executed_unreviewed")
+        t = t.replace("verification_status: not_started", "verification_status: executed_unreviewed")
+        t = t.replace("evidence_links: []", f'evidence_links: ["{b}"]')
+        note.write_text(t)
+        errs, _ = self.errors()
+        self.assertTrue(any("evidence_links disagree with catalog evidence" in e for e in errs), errs)
+        self.assertFalse(any("requires non-empty evidence_links" in e for e in errs), errs)
+
+    def test_template_suffix_is_secret_scanned(self):
+        (self.root / "templates" / "x.yml.template").write_text("k: " + "AKIA" + "ABCDEFGHIJKLMNOP\n")
+        self.assertError("possible aws access key")
+
+    def test_bearer_pattern_alone(self):
+        (self.root / "docs" / "b.md").write_text("Authorization: " + "Bearer " + "abcdefghij0123456789xyz")
+        errs, _ = self.errors()
+        self.assertEqual([e for e in errs if "possible" in e], ["docs/b.md: possible bearer token"])
+
+    def test_hardcoded_secret_rule_scoped_to_code_suffixes(self):
+        line = "pass" + 'word = "' + "hunter2" + '"\n'
+        (self.root / "docs" / "p.md").write_text(line)
+        (self.root / "docs" / "p.txt").write_text(line)
+        errs, _ = self.errors()
+        self.assertFalse([e for e in errs if "hard-coded secret" in e], errs)
+
+    def test_new_text_suffixes_are_scanned(self):
+        for suffix in (".env", ".conf", ".properties"):
+            with self.subTest(suffix=suffix):
+                p = self.root / "docs" / f"c{suffix}"
+                p.write_text("k=" + "AKIA" + "ABCDEFGHIJKLMNOP\n")
+                self.assertError("possible aws access key")
+                p.unlink()
+
+
 class TestKnowledgeGovernance(CatalogCase):
     NOTE = "notes/chapter-01/1.1-read-csv-data.md"
 
@@ -409,8 +534,7 @@ class TestKnowledgeGovernance(CatalogCase):
         self.assertError("concept_id must be a stable lowercase id")
 
     def test_verified_note_missing_engine_version_and_last_verified(self):
-        (self.root / "evidence").mkdir()
-        (self.root / "evidence" / "e.md").write_text("ok")
+        self.write_evidence("e.md")
         self.mutate_recipes(lambda rs: rs[0].update(
             status="verified", evidence=["evidence/e.md"], reviewed_by="x", databricks_runtime="16.4",
             last_verified="2026-01-01"))

@@ -13,7 +13,9 @@
   - The Databricks runtime version.
   - The verification date.
 
-Evidence paths must be repo-relative, contain no `..`, resolve (after symlinks) inside `evidence/`, and point to an existing file. The same rule applies to recipes and labs.
+Evidence paths must be repo-relative, contain no `..`, resolve (after symlinks) inside `evidence/`, and point to an existing file. The same rule applies to recipes, labs and SQL companion tracks.
+
+At `executed_unreviewed` and `verified`, each evidence file must also be shaped like an evidence record: not a `README.md` placeholder, front matter with every key from `templates/evidence-record.md`, `evidence_type` of `cloud_execution` or `human_verification`, and `sanitized: true`. `verified` also needs a non-empty `human_reviewer` in the record. This is a structural check. It cannot prove the run happened or that the record is truthful.
 
 Recipes of class `alt_env` cannot be `verified` without evidence from the alternative environment.
 

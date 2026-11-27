@@ -108,6 +108,9 @@ try:
 
     # Create the volume if needed. This run owns it only if it did not exist before.
     existed = volume_existed()
+    if existed is None:
+        warnings.append("volume lookup failed: ownership unknown, so the volume is never dropped. "
+                        "If this run created it, remove it by hand")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS `{catalog}`.`{schema}`.`{volume}`")
     created_volume = existed is False
 

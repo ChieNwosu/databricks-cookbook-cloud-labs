@@ -21,7 +21,7 @@ Steering files use Kiro's documented frontmatter (`inclusion: always` for the co
 | Prompt injection in upstream files or fetched pages | `input-guardrails.md`, reviewer | None. Fetched text cannot be filtered by code here |
 | Secret disclosure or commit | `output-guardrails.md` | Best-effort pattern scan in `validate_catalog.py` and `lint_notebooks.py` (CI), steering scan in `check_policy.py`, `.gitignore` |
 | Path traversal or symlink escape | `input-guardrails.md` | `_safe_rel`, `check_repo_path`, `check_evidence_paths`, `check_unsafe_paths` and their tests |
-| Fabricated execution evidence | `output-guardrails.md` | Evidence file must exist for `executed_unreviewed` and `verified`. Existence is checked, truth is not |
+| Fabricated execution evidence | `output-guardrails.md` | Evidence file must exist and have evidence-record front matter (execution type, `sanitized: true`, human reviewer for `verified`). Structure is checked, truth is not |
 | Status inflation by an agent | `output-guardrails.md` | `verified` needs reviewer, runtime, date, engine version. Notes must match the catalog. A pure `agent_generated` note cannot be `verified` |
 | Test weakening or acceptance changes | `output-guardrails.md`, reviewer | Tests run in CI. A weakened test is visible in the diff but not blocked by code |
 | Scope creep into Recipe 1.1 | `product.md`, `learning-workflow.md` | Recipe 1.1 stays `not_started` and its note is a stub (validator and tests) |
@@ -69,4 +69,4 @@ If a needed action is blocked, report the blocker. Do not work around it.
 
 ## Policy check
 
-`python scripts/check_policy.py` verifies steering files and frontmatter, em dash absence in docs and templates, steering secret scan, workflow shape (read-only permissions, no `pull_request_target`, only `GITHUB_TOKEN` secrets, MySQL workflows manual with timeout and retention of 7 days or less), and that the SQL benchmark template is `not_started`. CI runs it. SQL companion catalog rules run inside `validate_catalog.py`.
+`python scripts/check_policy.py` verifies steering files and frontmatter, em dash absence in steering, docs, templates, notes, catalog, labs, `sql/`, `evidence/`, README and CONTRIBUTING (`.agents/` task artifacts are not scanned), steering secret scan, workflow shape (read-only permissions, no `pull_request_target`, only `GITHUB_TOKEN` secrets, MySQL workflows manual with timeout and retention of 7 days or less), and that the SQL benchmark template is `not_started`. CI runs it. SQL companion catalog rules run inside `validate_catalog.py`.

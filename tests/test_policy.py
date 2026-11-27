@@ -41,7 +41,7 @@ class PolicyCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        for d in (".kiro", ".github", "templates", "docs", "catalog"):
+        for d in (".kiro", ".github", "templates", "docs", "catalog", "notes", "labs"):
             shutil.copytree(REPO / d, self.root / d)
         for f in ("README.md", "CONTRIBUTING.md"):
             shutil.copy(REPO / f, self.root / f)
@@ -95,6 +95,21 @@ class TestPolicy(PolicyCase):
         p = self.root / "docs" / "agent-governance.md"
         p.write_text(p.read_text() + "x \u2014 y\n")
         self.assertRejected("agent-governance.md: contains an em dash")
+
+    def test_em_dash_in_note_catalog_and_lab(self):
+        for rel in ("notes/chapter-01/1.1-read-csv-data.md", "catalog/chapters.json", "labs/chapter-01/README.md"):
+            with self.subTest(rel=rel):
+                p = self.root / rel
+                original = p.read_text()
+                p.write_text(original + "x \u2014 y\n")
+                self.assertRejected(f"{rel}: contains an em dash")
+                p.write_text(original)
+
+    def test_em_dash_scan_skips_agents_task_files(self):
+        d = self.root / ".agents" / "tasks" / "t"
+        d.mkdir(parents=True)
+        (d / "review.md").write_text("x \u2014 y\n")
+        self.assertEqual(P.check_policy(self.root), [])
 
     def test_secret_in_steering(self):
         fake = "dapi" + "0123456789abcdef" * 2  # synthetic, nonfunctional
@@ -164,6 +179,15 @@ class TestPolicy(PolicyCase):
         self.wf("mysql-benchmark.yml", GOOD_MYSQL_WF)
         self.assertRejected("no mysql workflow is approved for activation")
 
+    def test_mysql_workflow_with_cache_rejected(self):
+        errs = []
+        P.check_workflow_text("mysql.yml", GOOD_MYSQL_WF + "      - uses: actions/cache@v4\n", errs)
+        self.assertEqual(errs, ["mysql.yml: mysql workflow must not use a cache"])
+
+    def test_sql_named_doc_labelled_executed(self):
+        (self.root / "docs" / "my-sql-notes.md").write_text("---\nstatus: executed_unreviewed\n---\nbody\n")
+        self.assertRejected("docs/my-sql-notes.md: SQL document labelled executed_unreviewed")
+
     def test_template_is_linted(self):
         p = self.root / P.WORKFLOW_TEMPLATE
         p.write_text(p.read_text().replace("workflow_dispatch:", "schedule:", 1))
@@ -218,6 +242,48 @@ class TestSqlCompanionRules(unittest.TestCase):
             for t in ("databricks_sql", "mysql"):
                 self.assertEqual(e[t]["execution_status"], "not_started")
                 self.assertIsNone(e[t]["artifact_path"])
+
+    def na(self, **kw):
+        t = self.entry()["mysql"]
+        t.update(applicability="not_applicable", rationale="synthetic test rationale",
+                 proposed_by="agent", human_confirmed=False)
+        t.update(kw)
+        return t
+
+    def test_agent_suggestions_are_marked_in_seed(self):
+        n = 0
+        for e in self.data["entries"]:
+            for tr in ("databricks_sql", "mysql"):
+                if e[tr]["applicability"] == "not_applicable":
+                    n += 1
+                    self.assertEqual((e[tr]["proposed_by"], e[tr]["human_confirmed"]), ("agent", False))
+        self.assertEqual(n, 44)
+
+    def test_not_applicable_agent_suggestion_is_valid(self):
+        self.na()
+        self.assertEqual(self.errs(), [])
+
+    def test_not_applicable_needs_proposed_by(self):
+        self.na(proposed_by=None)
+        self.assertRejected("requires proposed_by")
+
+    def test_not_applicable_needs_boolean_human_confirmed(self):
+        self.na(human_confirmed="no")
+        self.assertRejected("requires boolean human_confirmed")
+
+    def test_human_confirmed_needs_reviewer(self):
+        self.na(human_confirmed=True)
+        self.assertRejected("human_confirmed requires reviewed_by")
+        self.na(human_confirmed=True, reviewed_by="reviewer")
+        self.assertEqual(self.errs(), [])
+
+    def test_human_proposed_must_be_confirmed(self):
+        self.na(proposed_by="human")
+        self.assertRejected("a human-proposed decision must be human_confirmed")
+
+    def test_provenance_fields_only_on_not_applicable(self):
+        self.entry()["mysql"]["human_confirmed"] = True
+        self.assertRejected("apply only to not_applicable")
 
     def test_unknown_recipe_id(self):
         self.data["entries"][0]["recipe_id"] = "99.9"

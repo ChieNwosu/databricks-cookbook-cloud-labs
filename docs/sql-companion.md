@@ -22,12 +22,13 @@ Per recipe, per track (`databricks_sql`, `mysql`):
 | `execution_status` | `not_started`, `drafted`, `executed_unreviewed`, `verified`. Independent of applicability |
 | `artifact_path` | Planned script path under `sql/<track>/chapter-NN/`. Null unless applicable or planned |
 | `rationale` | Required for `not_applicable`. Names the concept, not an invented fact |
+| `proposed_by`, `human_confirmed` | Required for `not_applicable` only. `agent` plus `human_confirmed: false` is a suggestion, not a decision. A human sets `human_confirmed: true` and `reviewed_by` |
 | `evidence`, `reviewed_by` | Same rules as the main catalog |
 | `target_version`, `observed_version`, `semantic_notes` | MySQL only. Target is `8.0`. Observed stays null until evidence from `SELECT VERSION()` exists |
 
-Rules enforced by `validate_catalog.py`: ids exist, enums valid, every recipe has an entry, `not_applicable` has a rationale, `not_applicable` and `unresolved` stay `not_started`, `executed_unreviewed` and `verified` need existing evidence under `evidence/`, `observed_version` needs evidence.
+Rules enforced by `validate_catalog.py`: ids exist, enums valid, every recipe has an entry, `not_applicable` has a rationale, a `proposed_by` (`agent` or `human`) and a boolean `human_confirmed` (true needs `reviewed_by`), `not_applicable` and `unresolved` stay `not_started`, `executed_unreviewed` and `verified` need existing evidence under `evidence/`, `observed_version` needs evidence.
 
-Seeding: every recipe is `unresolved`, except entries where the concept itself clearly has no counterpart (for example streaming, Delta maintenance, Spark execution, Unity Catalog, DLT, tooling). Those are `not_applicable` with a rationale. Both lists are a starting point for the human to change. The 6 vs 9 gap in `coverage_gaps.json` (six unconfirmed ids named, nine unaccounted) is unrelated and is left as is.
+Seeding: every recipe is `unresolved`, except entries where the concept itself clearly has no counterpart (for example streaming, Delta maintenance, Spark execution, Unity Catalog, DLT, tooling). Those are `not_applicable` with a rationale, marked `proposed_by: agent` and `human_confirmed: false`, so they are suggestions awaiting a human decision. Both lists are a starting point for the human to change. The 6 vs 9 gap in `coverage_gaps.json` (six unconfirmed ids named, nine unaccounted) is unrelated and is left as is.
 
 MySQL 8.0 is the initial target because GitHub-hosted Ubuntu 24.04 runners currently provide it. The actual version must be recorded from a real run.
 

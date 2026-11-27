@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "note": "Companion tracks are supplemental. The book exercises (PySpark) stay primary. Applicability is a human decision: 'unresolved' means nobody has decided yet, and 'planned' is only used after a human decision. Nothing here has been executed. See docs/sql-companion.md.",
+  "note": "Companion tracks are supplemental. The book exercises (PySpark) stay primary. Applicability is a human decision. A 'not_applicable' value with proposed_by 'agent' and human_confirmed false is only an agent suggestion awaiting that decision: 'unresolved' means nobody has decided yet, and 'planned' is only used after a human decision. Nothing here has been executed. See docs/sql-companion.md.",
   "defaults": {
     "applicability": "unresolved",
     "execution_status": "not_started",
@@ -405,6 +405,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Lake table maintenance and time travel (OPTIMIZE, VACUUM, versioned snapshots) have no direct MySQL feature. InnoDB uses MVCC for concurrency, not queryable table history.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -426,6 +428,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Lake table maintenance and time travel (OPTIMIZE, VACUUM, versioned snapshots) have no direct MySQL feature. InnoDB uses MVCC for concurrency, not queryable table history.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -467,6 +471,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -488,6 +494,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -509,6 +517,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -530,6 +540,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -551,6 +563,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -572,6 +586,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -593,6 +609,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -614,6 +632,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -635,6 +655,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -656,6 +678,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -677,6 +701,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -698,6 +724,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -719,6 +747,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark Structured Streaming concepts (continuous micro-batch queries, checkpoints, triggers, watermarks) have no equivalent in MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -732,7 +762,9 @@
         "artifact_path": null,
         "evidence": [],
         "reviewed_by": null,
-        "rationale": "The Spark UI is a graphical monitoring tool, not SQL."
+        "rationale": "The Spark UI is a graphical monitoring tool, not SQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false
       },
       "mysql": {
         "applicability": "not_applicable",
@@ -741,6 +773,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -762,6 +796,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -783,6 +819,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -804,6 +842,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -825,6 +865,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -846,6 +888,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Spark execution concepts (distributed lazy plans, shuffles, caching, partitions, Spark UI) do not exist in a single-node MySQL optimizer.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -907,6 +951,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Lake file layout features (Z-order clustering, data skipping statistics) have no MySQL counterpart.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -928,6 +974,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Lake file layout features (Z-order clustering, data skipping statistics) have no MySQL counterpart.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -969,6 +1017,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks Workflows job orchestration is a platform feature outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -990,6 +1040,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks Workflows job orchestration is a platform feature outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1011,6 +1063,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1032,6 +1086,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1053,6 +1109,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1074,6 +1132,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1095,6 +1155,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1116,6 +1178,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Delta Live Tables pipelines and expectations are Databricks pipeline features outside MySQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1137,6 +1201,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Unity Catalog governance objects, lineage and system tables are Databricks features. MySQL has GRANT and roles, which are a different model.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1158,6 +1224,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Unity Catalog governance objects, lineage and system tables are Databricks features. MySQL has GRANT and roles, which are a different model.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1199,6 +1267,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Unity Catalog governance objects, lineage and system tables are Databricks features. MySQL has GRANT and roles, which are a different model.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1220,6 +1290,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Unity Catalog governance objects, lineage and system tables are Databricks features. MySQL has GRANT and roles, which are a different model.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1233,7 +1305,9 @@
         "artifact_path": null,
         "evidence": [],
         "reviewed_by": null,
-        "rationale": "Databricks Git folders are tooling, not SQL."
+        "rationale": "Databricks Git folders are tooling, not SQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false
       },
       "mysql": {
         "applicability": "not_applicable",
@@ -1242,6 +1316,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks developer tooling (Git folders, SDK, VS Code extension, Asset Bundles) is not a database engine feature.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1255,7 +1331,9 @@
         "artifact_path": null,
         "evidence": [],
         "reviewed_by": null,
-        "rationale": "The Databricks SDK is a Python API, not SQL."
+        "rationale": "The Databricks SDK is a Python API, not SQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false
       },
       "mysql": {
         "applicability": "not_applicable",
@@ -1264,6 +1342,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks developer tooling (Git folders, SDK, VS Code extension, Asset Bundles) is not a database engine feature.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1277,7 +1357,9 @@
         "artifact_path": null,
         "evidence": [],
         "reviewed_by": null,
-        "rationale": "The VS Code extension is developer tooling, not SQL."
+        "rationale": "The VS Code extension is developer tooling, not SQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false
       },
       "mysql": {
         "applicability": "not_applicable",
@@ -1286,6 +1368,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks developer tooling (Git folders, SDK, VS Code extension, Asset Bundles) is not a database engine feature.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""
@@ -1299,7 +1383,9 @@
         "artifact_path": null,
         "evidence": [],
         "reviewed_by": null,
-        "rationale": "Asset Bundles are deployment tooling, not SQL."
+        "rationale": "Asset Bundles are deployment tooling, not SQL.",
+        "proposed_by": "agent",
+        "human_confirmed": false
       },
       "mysql": {
         "applicability": "not_applicable",
@@ -1308,6 +1394,8 @@
         "evidence": [],
         "reviewed_by": null,
         "rationale": "Databricks developer tooling (Git folders, SDK, VS Code extension, Asset Bundles) is not a database engine feature.",
+        "proposed_by": "agent",
+        "human_confirmed": false,
         "target_version": "8.0",
         "observed_version": null,
         "semantic_notes": ""

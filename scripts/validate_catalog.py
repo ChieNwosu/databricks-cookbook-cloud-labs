@@ -36,12 +36,14 @@ REFLECTIONS_HEADING = "## My reflections (human-authored)"
 EVIDENCE_KEYS = ["recipe_id", "engine", "engine_version", "evidence_type", "run_url", "screenshot_path", "date",
                  "databricks_runtime", "sanitized", "human_reviewer", "result"]
 EVIDENCE_TYPES = ["static_validation", "unit_test", "integration_test", "cloud_execution", "human_verification"]
+EXECUTION_EVIDENCE_TYPES = ["cloud_execution", "human_verification"]
 APPLICABILITY = ["planned", "applicable", "not_applicable", "unresolved"]
+PROPOSERS = ["agent", "human"]
 SQL_TRACKS = ("databricks_sql", "mysql")
 CONCEPT_ID_RX = re.compile(r"[a-z0-9][a-z0-9._-]*")
 SKIP_DIRS = {".git", "__pycache__", ".agents", "node_modules"}
 TEXT_SUFFIXES = {".md", ".json", ".py", ".yml", ".yaml", ".txt", ".sql", ".ipynb", ".toml", ".cfg", ".ini", ".sh",
-                 ".env", ".conf", ".properties", ""}
+                 ".env", ".conf", ".properties", ".template", ""}
 UNRESOLVED_KEYS = ("question", "source", "retrieved")
 
 
@@ -148,8 +150,38 @@ def check_repo_path(root, rel, tag, field, errors, must_exist=True):
     return True
 
 
-def check_evidence_paths(root, paths, tag, errors):
-    """Shared by recipes, labs and notes: every path is safe, inside evidence/, and an existing file."""
+def check_evidence_record(path, rel, status, tag, errors):
+    """Structural check of one evidence file. It proves the file is shaped like a record, not that it is true."""
+    if path.name.lower() == "readme.md":
+        errors.append(f"{tag}: evidence {rel} is a README placeholder, not an evidence record")
+        return False
+    try:
+        fm = parse_front_matter(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError, UnicodeDecodeError) as e:
+        errors.append(f"{tag}: evidence {rel} has no valid evidence-record front matter ({e})")
+        return False
+    missing = [k for k in EVIDENCE_KEYS if k not in fm]
+    if missing:
+        errors.append(f"{tag}: evidence {rel} front matter missing keys {missing}")
+        return False
+    ok = True
+    if fm["evidence_type"] not in EXECUTION_EVIDENCE_TYPES:
+        errors.append(f"{tag}: evidence {rel} has evidence_type {fm['evidence_type']!r}, "
+                      f"only {EXECUTION_EVIDENCE_TYPES} support {status}")
+        ok = False
+    if fm["sanitized"] is not True:
+        errors.append(f"{tag}: evidence {rel} must have sanitized: true")
+        ok = False
+    if status == "verified" and not _nonempty(fm["human_reviewer"]):
+        errors.append(f"{tag}: evidence {rel} needs a human_reviewer for verified")
+        ok = False
+    return ok
+
+
+def check_evidence_paths(root, paths, tag, errors, status=None):
+    """Shared by recipes, labs, notes and SQL tracks: every path is safe, inside evidence/, and an existing file.
+
+    With status executed_unreviewed or verified the file must also be a structural evidence record."""
     ok = True
     for ev in paths or []:
         if not check_repo_path(root, ev, tag, "evidence path", errors, must_exist=False):
@@ -163,6 +195,9 @@ def check_evidence_paths(root, paths, tag, errors):
         elif not resolved.is_file():
             errors.append(f"{tag}: evidence file not found: {ev}")
             ok = False
+        elif status in ("executed_unreviewed", "verified"):
+            if not check_evidence_record(resolved, ev, status, tag, errors):
+                ok = False
     return ok
 
 
@@ -225,7 +260,7 @@ def check_recipes(root, data, chapter_ids, errors):
             if not _nonempty(r.get("evidence")):
                 errors.append(f"{tag}: {status} requires non-empty 'evidence'")
             if isinstance(r.get("evidence", []), list):
-                check_evidence_paths(root, r.get("evidence"), tag, errors)
+                check_evidence_paths(root, r.get("evidence"), tag, errors, status)
         if status == "verified":
             for k in ("evidence", "reviewed_by", "databricks_runtime", "last_verified"):
                 if not _nonempty(r.get(k)):
@@ -316,7 +351,7 @@ def check_labs(root, data, errors):
         if lab.get("status") in ("executed_unreviewed", "verified") and not lab.get("evidence"):
             errors.append(f"{tag}: {lab.get('status')} requires evidence")
         if lab.get("status") in ("executed_unreviewed", "verified") and isinstance(lab.get("evidence"), list):
-            check_evidence_paths(root, lab.get("evidence"), tag, errors)
+            check_evidence_paths(root, lab.get("evidence"), tag, errors, lab.get("status"))
         if lab.get("status") == "verified":
             for k in ("reviewed_by", "databricks_runtime", "last_verified"):
                 if not _nonempty(lab.get(k)):
@@ -468,6 +503,17 @@ def _check_sql_track(root, tag, track, t, errors):
         errors.append(f"{tt}: {app} entries must have artifact_path null")
     if app == "not_applicable" and not _nonempty(t.get("rationale")):
         errors.append(f"{tt}: not_applicable requires a rationale")
+    if app == "not_applicable":
+        if t.get("proposed_by") not in PROPOSERS:
+            errors.append(f"{tt}: not_applicable requires proposed_by in {PROPOSERS}")
+        if not isinstance(t.get("human_confirmed"), bool):
+            errors.append(f"{tt}: not_applicable requires boolean human_confirmed")
+        elif t["human_confirmed"] and not _nonempty(t.get("reviewed_by")):
+            errors.append(f"{tt}: human_confirmed requires reviewed_by")
+        elif t.get("proposed_by") == "human" and not t["human_confirmed"]:
+            errors.append(f"{tt}: a human-proposed decision must be human_confirmed")
+    elif "proposed_by" in t or "human_confirmed" in t:
+        errors.append(f"{tt}: proposed_by and human_confirmed apply only to not_applicable")
     if app in ("not_applicable", "unresolved") and ex != "not_started":
         errors.append(f"{tt}: {app} entries must have execution_status not_started")
     if ex in ("drafted", "executed_unreviewed", "verified") and isinstance(art, str):
@@ -478,7 +524,7 @@ def _check_sql_track(root, tag, track, t, errors):
     if t.get("evidence") is not None and not isinstance(t.get("evidence"), list):
         errors.append(f"{tt}: evidence must be a list")
     elif t.get("evidence"):
-        check_evidence_paths(root, t["evidence"], tt, errors)
+        check_evidence_paths(root, t["evidence"], tt, errors, ex)
     if ex == "verified" and not _nonempty(t.get("reviewed_by")):
         errors.append(f"{tt}: verified requires reviewed_by")
     if track == "mysql":

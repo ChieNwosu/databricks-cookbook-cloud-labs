@@ -79,6 +79,10 @@ def policy_text_files(root):
         d = root / sub
         if d.is_dir():
             out += [p for p in sorted(d.rglob("*")) if p.is_file() and not p.is_symlink()]
+    for sub in ("notes", "catalog", "labs", "sql", "evidence"):
+        d = root / sub
+        if d.is_dir():
+            out += [p for p in sorted(d.rglob("*")) if p.is_file() and not p.is_symlink()]
     for name in ("README.md", "CONTRIBUTING.md"):
         if (root / name).is_file():
             out.append(root / name)
