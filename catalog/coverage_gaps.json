@@ -1,0 +1,64 @@
+{
+  "expected_total": 72,
+  "expected_total_source": "user statement, not yet reconciled with book table of contents",
+  "evidenced_count": 63,
+  "unaccounted_count": 9,
+  "per_chapter": [
+    {
+      "chapter": 1,
+      "evidenced": 7,
+      "unconfirmed_note": "none noted"
+    },
+    {
+      "chapter": 2,
+      "evidenced": 7,
+      "unconfirmed_note": "none noted"
+    },
+    {
+      "chapter": 3,
+      "evidenced": 8,
+      "unconfirmed_note": "none noted"
+    },
+    {
+      "chapter": 4,
+      "evidenced": 7,
+      "unconfirmed_note": "upstream also has 4.0 Kafka generator notebooks (support files, not recipes)"
+    },
+    {
+      "chapter": 5,
+      "evidenced": 6,
+      "unconfirmed_note": "upstream also has 5.0 generator notebooks (support files, not recipes)"
+    },
+    {
+      "chapter": 6,
+      "evidenced": 7,
+      "unconfirmed_note": "none noted"
+    },
+    {
+      "chapter": 7,
+      "evidenced": 4,
+      "unconfirmed_note": "only 7.1 to 7.4 evidenced; any further recipes unconfirmed"
+    },
+    {
+      "chapter": 8,
+      "evidenced": 2,
+      "unconfirmed_note": "only 8.1 and 8.4 evidenced; IDs 8.2, 8.3 and any later recipes unconfirmed. Support SQL files (Setup, Clean Up, Data Preparation DLT, Download Inventory Data) are not recipes"
+    },
+    {
+      "chapter": 9,
+      "evidenced": 6,
+      "unconfirmed_note": "9.2 has no upstream artifact; unconfirmed"
+    },
+    {
+      "chapter": 10,
+      "evidenced": 5,
+      "unconfirmed_note": "10.1 and 10.3 have no upstream artifact; unconfirmed"
+    },
+    {
+      "chapter": 11,
+      "evidenced": 4,
+      "unconfirmed_note": "11.2 has no upstream artifact; unconfirmed"
+    }
+  ],
+  "note": "No titles are invented for unevidenced IDs. A human must reconcile against the book TOC."
+}

@@ -1,0 +1,70 @@
+{
+  "chapters": [
+    {
+      "id": 1,
+      "title": "Data ingestion and extraction with Spark",
+      "theme": "Reading and writing common file formats",
+      "upstream_folder": "Chapter01"
+    },
+    {
+      "id": 2,
+      "title": "Data transformation and manipulation",
+      "theme": "DataFrame transformations, joins, windows, UDFs, nulls",
+      "upstream_folder": "Chapter02"
+    },
+    {
+      "id": 3,
+      "title": "Delta Lake data management",
+      "theme": "Creating, reading, merging, versioning and maintaining Delta tables",
+      "upstream_folder": "Chapter03"
+    },
+    {
+      "id": 4,
+      "title": "Ingesting streaming data",
+      "theme": "Structured Streaming sources, checkpoints, triggers, windows",
+      "upstream_folder": "Chapter04"
+    },
+    {
+      "id": 5,
+      "title": "Processing streaming data",
+      "theme": "Streaming writes to Delta, CDC merges, stream joins, monitoring",
+      "upstream_folder": "Chapter05"
+    },
+    {
+      "id": 6,
+      "title": "Spark performance tuning",
+      "theme": "Spark UI, shuffles, skew, caching, partitioning, join strategies",
+      "upstream_folder": "Chapter06"
+    },
+    {
+      "id": 7,
+      "title": "Delta Lake performance tuning",
+      "theme": "Partitioning, Z-order, data skipping and compression for Delta",
+      "upstream_folder": "Chapter07"
+    },
+    {
+      "id": 8,
+      "title": "Workflows and orchestration",
+      "theme": "Databricks Workflows jobs and task logic",
+      "upstream_folder": "Chapter08"
+    },
+    {
+      "id": 9,
+      "title": "Delta Live Tables pipelines",
+      "theme": "Declarative pipelines, quality rules, CDC, monitoring",
+      "upstream_folder": "Chapter09"
+    },
+    {
+      "id": 10,
+      "title": "Unity Catalog governance",
+      "theme": "Object hierarchy, metadata, access filtering, lineage, system tables",
+      "upstream_folder": "Chapter10"
+    },
+    {
+      "id": 11,
+      "title": "DataOps and DevOps",
+      "theme": "Git integration, SDK, IDE tooling, asset bundles, CI/CD",
+      "upstream_folder": "Chapter11"
+    }
+  ]
+}
